@@ -42,7 +42,7 @@ end
 function relativeFrequency = calculateHistogram(imgv)
     % Get the relative frequency and plot
     values = 0:255;
-    dist = histc(imgv(:), values);
+    dist = imhist(imgv);
     prob = dist / max(dist);
     figure(2);
     bar(values, prob);
