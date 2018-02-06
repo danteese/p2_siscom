@@ -29,9 +29,12 @@ function o_ = compimag( name, format, umbral )
     % Use of blockproc from https://la.mathworks.com/matlabcentral/answers/119281-what-blkproc-i-8-8-dct2-means
     fun = @(block_struct) dct2(block_struct.data);
     b = blockproc(imgv,[8,8],fun);
+    [r c] = find(abs(b) > 10);
     b(abs(b) < 10) = 0;
     %% Calculate new entropy with new matrix
-    
+    r_freq = calculateHistogram(b);
+    n_entropy = calculateEntropy(r_freq);
+    n_real = entropy(b);
     
     o_ = gray;
 end
