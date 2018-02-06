@@ -11,10 +11,6 @@ function o_ = compimag( name, format, umbral )
     %% Entrophy
     % Calculate histogram
     prob = calculateHistogram(imgv);
-    figure(2);
-    values = min(imgv(:)):max(imgv(:));
-    bar(values, prob);
-    title('Histograma P(x)');
     
     % Calculate ammount of information
     % ** Remember: Sum of all the probabilities has to be 1.0
@@ -36,24 +32,11 @@ function o_ = compimag( name, format, umbral )
     b = blockproc(imgv,[8,8],fun);
     % Create mask 
     [r c] = find(abs(b) > 10);
-    % Round to the nearest value and delete < 10
-    b = round(b);
     b(abs(b) < 10) = 0;
-    % Crop values
-    b(b > 255) = 255;
     
     %% Calculate new entropy with new matrix
-    figure(4)
-    [counts, binLocations] = imhist(b);
-    sum(counts.*log2(.1/counts))
-    
-%     b = abs(b);
-%     r_freq = calculateHistogram(b);
-%     figure(3);
-%     dct_values = min(b(:)):max(b(:));
-%     bar(dct_values, r_freq.*b);
-%     title('Histograma P(x)');
-%     n_entropy = calculateEntropy(r_freq);
+    r_freq = calculateHistogram(b);
+    n_entropy = calculateEntropy(r_freq);
     n_real = entropy(b);
     fprintf("DCT\n\tBy hand: %2.5f | Matlab: %2.5f\n", n_entropy, n_real);
     
@@ -62,13 +45,8 @@ end
 
 function relativeFrequency = calculateHistogram(imgv)
     % Get the relative frequency and plot
-<<<<<<< HEAD
-    values = min(imgv(:)):max(imgv(:));
-    dist = histc(imgv(:), values);
-=======
     values = 0:255;
     dist = imhist(imgv);
->>>>>>> d0574032c919bf6b669afef03ec7cfe02d49663f
     prob = dist / max(dist);
     relativeFrequency = prob;
 end
