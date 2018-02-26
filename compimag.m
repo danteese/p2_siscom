@@ -1,75 +1,96 @@
-function o_ = compimag( name, format, umbral )
-    % Processing of all practice 2
-    %% Open and convert the image to 255 grayscale
-    fullname_ = strcat( name, '.', format);
-    imdata = imread(fullname_);
-    imgv = rgb2gray(imdata);
-    figure(1);
-    imshow(imgv);
-    title(fullname_);
+function compimag(name, format, umbral)
+
+    file = strcat( name, '.', format);
+    original = imread(file);
+    grayScale = rgb2gray(original);
+
+    showImage(grayScale,file,1,1);
     
-    %% Entrophy
-    % Calculate histogram
-    prob = calculateHistogram(imgv);
+    probability1 = getProbability(grayScale);
     
-    % Calculate ammount of information
-    % ** Remember: Sum of all the probabilities has to be 1.0
-    e = calculateEntropy(prob);
-    real = entropy(imgv);
-    if floor(e) == floor(real)
-        result = 'Son iguales';
-    end
-    if floor(e) ~= floor(real)
-        result = 'Difieren';
-    end
-    result = strcat(result, " (BH):", num2str(e), " BITS., (Matlab):", num2str(real), " BITS.\n");
-    fprintf(result);
+    e1 = getEntropy(probability1);
     
-    %% Crop image in blocks of 8x8 pixels and apply DCT
+    compressedImage = zipImage(grayScale,umbral);
     
-    % Use of blockproc from https://la.mathworks.com/matlabcentral/answers/119281-what-blkproc-i-8-8-dct2-means
+    probability2 = getProbability(compressedImage);
+    
+    e2 = getEntropy(probability2);
+    
+    showImage(compressedImage,"Compressed Image",1,2);
+    
+    decompressedImage = unzipImage(compressedImage);
+    
+    showImage(decompressedImage,"Uncompressed Image",1,3);
+    
+    clc;
+    fprintf("Entropia 1: %d\n", e1);
+    fprintf("Entropia 1 matlab: %d\n", entropy(grayScale));
+    fprintf("Entropia 2: %d\n", e2);
+    fprintf("Entropia 2 matlab: %d\n", entropy(compressedImage));
+    
+    fprintf("El error es: %f\n", getError(decompressedImage, grayScale));
+    
+    fprintf("Porcentaje de compresión: %f\n", getPercentage(decompressedImage, grayScale, umbral));
+  
+end
+
+function percomp = getPercentage(decompressedImage, grayScale, umbral)
+
+    mask2 = decompressedImage;
+    mask2(abs(mask2) < umbral) = 1;
+    mask2(abs(mask2) >= umbral) = 0;
+   
+    s2 = sum(sum(mask2));
+    
+    t = length(grayScale(:));
+    percomp = (1 - ((t - s2)/t)) * 100;
+
+end
+
+function err = getError(decompressedImage, grayScale)
+
+    emc = immse(decompressedImage, grayScale);
+    pot = sum(sum(decompressedImage.^2));
+    err = (emc /pot) * 100;
+
+end
+
+function showImage(image,tit,fig,sub)
+    
+    figure(fig);
+    subplot(2,2,sub);
+    imshow(image);
+    title(tit)
+
+end
+
+function newImage = unzipImage(image)
+
+    fun = @(block_struct) idct2(block_struct.data);
+    newImage = uint8(blockproc(image,[8,8],fun));
+
+end
+
+function newImage = zipImage(image,umbral)
+
     fun = @(block_struct) dct2(block_struct.data);
-    b = blockproc(imgv,[8,8],fun);
-    % Create mask 
-    [r c] = find(abs(b) > 10);
-    b(abs(b) < 10) = 0;
-    
-    %% Calculate new entropy with new matrix
-    r_freq = calculateHistogram(b);
-    n_entropy = calculateEntropy(r_freq);
-    n_real = entropy(b);
-    fprintf("DCT\n\tBy hand: %2.5f | Matlab: %2.5f\n", n_entropy, n_real);
-    
-    o_ = gray;
+    newImage = round(blockproc(image,[8,8],fun));
+    newImage(abs(newImage) < umbral) = 0;
+   
 end
 
-function relativeFrequency = calculateHistogram(imgv)
-    % Get the relative frequency and plot
-    values = 0:255;
-    dist = imhist(imgv);
-    prob = dist / max(dist);
-    relativeFrequency = prob;
-end
+function entropy = getEntropy(probability)
 
-function entropy = calculateEntropy(prob)
-    % Get the probability of each point and returns the entropy of full image 
-    tot_ = sum(prob); 
-    prob = prob/tot_;
-    innDist = 1./prob;
-    l = log2( innDist );
-    l(~isfinite(l)) = 0;
-    I = prob.*l;
+    probability = probability/sum(probability);
+    I = log2(1./probability).*probability;
+    I(~isfinite(I)) = 0;
     entropy = sum(I);
+    
 end
 
-%% Maybe used for the rect using imcrop
-function rects = getRectsForCrop(sizeW, sizeL)
-    coords = [];
-    for m = 0:8:(sizeW-1)
-        for n = 0:8:(sizeL-1)
-            temp = [m,n,8,8];
-            coords = vertcat(coords, temp);
-        end     
-    end
-    rects = coords;
+function probability = getProbability(image)
+
+    histogram = imhist(image);
+    probability = histogram / max(histogram);
+    
 end

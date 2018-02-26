@@ -1,0 +1,1 @@
+compimag('tirano','jpg', 10);
